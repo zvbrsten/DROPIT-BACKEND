@@ -6,7 +6,7 @@ require("dotenv").config();
 const app = express();
 app.use(
   cors({
-    origin: "https://your-frontend.vercel.app", // 🔁 Replace with your actual frontend URL
+    origin: "https://dropit-sepia.vercel.app/", // 🔁 Replace with your actual frontend URL
     credentials: true, // optional, only if you use cookies or auth headers
   })
 );
