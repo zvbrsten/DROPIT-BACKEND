@@ -14,10 +14,6 @@ const s3 = new S3Client({
 
 const uploadFile = async (req, res) => {
   try {
-    console.log("🔥 Upload route hit");
-    console.log("📦 req.file:", req.file);
-    console.log("📎 req.body:", req.body);
-
     if (!req.file) {
       return res.status(400).json({ error: "No file provided" });
     }
@@ -25,8 +21,8 @@ const uploadFile = async (req, res) => {
     const { originalname, buffer, mimetype } = req.file;
     const code = generateCode();
     const s3Key = `uploads/${Date.now()}-${originalname}`;
-    const downloadURL = `https://dropit-sepia.vercel.app/download/${code}`;
 
+    // Upload to S3
     await s3.send(new PutObjectCommand({
       Bucket: process.env.S3_BUCKET_NAME,
       Key: s3Key,
@@ -36,11 +32,27 @@ const uploadFile = async (req, res) => {
 
     const expiresAt = new Date(Date.now() + process.env.URL_EXPIRY * 1000);
 
+    // Save metadata
     await File.create({ code, s3Key, filename: originalname, mimeType: mimetype, expiresAt });
 
-    const qrCode = await QRCode.toDataURL(downloadURL);
+    // ✅ Generate S3 signed URL directly
+    const command = new GetObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: s3Key,
+    });
 
-    res.json({ code, qrCode, downloadURL });
+    const signedUrl = await getSignedUrl(s3, command, {
+      expiresIn: parseInt(process.env.URL_EXPIRY),
+    });
+
+    // ✅ Generate QR from signed URL
+    const qrCode = await QRCode.toDataURL(signedUrl);
+
+    res.json({
+      code,
+      qrCode,
+      downloadURL: signedUrl, // now this is the real S3 URL
+    });
   } catch (err) {
     console.error("❌ Upload error:", err);
     res.status(500).json({ error: "Upload failed", details: err.message });
