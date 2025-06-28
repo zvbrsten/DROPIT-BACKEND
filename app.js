@@ -4,7 +4,12 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://your-frontend.vercel.app", // 🔁 Replace with your actual frontend URL
+    credentials: true, // optional, only if you use cookies or auth headers
+  })
+);
 app.use(express.json());
 
 // ✅ Clean MongoDB connection
