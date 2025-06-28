@@ -25,7 +25,7 @@ const uploadFile = async (req, res) => {
     const { originalname, buffer, mimetype } = req.file;
     const code = generateCode();
     const s3Key = `uploads/${Date.now()}-${originalname}`;
-    const downloadURL = `http://localhost:3000/download/${code}`;
+    const downloadURL = `https://dropit-sepia.vercel.app/download/${code}`;
 
     await s3.send(new PutObjectCommand({
       Bucket: process.env.S3_BUCKET_NAME,
