@@ -1,4 +1,4 @@
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const File = require("../models/File");
 const generateCode = require("../utils/generateCode");
@@ -14,10 +14,6 @@ const s3 = new S3Client({
 
 const uploadFile = async (req, res) => {
   try {
-    console.log("🔥 Upload route hit");
-    console.log("📦 req.file:", req.file);
-    console.log("📎 req.body:", req.body);
-
     if (!req.file) {
       return res.status(400).json({ error: "No file provided" });
     }
@@ -25,8 +21,8 @@ const uploadFile = async (req, res) => {
     const { originalname, buffer, mimetype } = req.file;
     const code = generateCode();
     const s3Key = `uploads/${Date.now()}-${originalname}`;
-    const downloadURL = `https://dropit-sepia.vercel.app/download/${code}`;  // frontend route
 
+    // Upload to S3
     await s3.send(new PutObjectCommand({
       Bucket: process.env.S3_BUCKET_NAME,
       Key: s3Key,
@@ -36,26 +32,29 @@ const uploadFile = async (req, res) => {
 
     const expiresAt = new Date(Date.now() + parseInt(process.env.URL_EXPIRY) * 1000);
 
-    await File.create({
-      code,
-      s3Key,
-      filename: originalname,
-      mimeType: mimetype,
-      expiresAt,
+    // Save in DB
+    await File.create({ code, s3Key, filename: originalname, mimeType: mimetype, expiresAt });
+
+    // Generate Signed URL now for QR code
+    const signedCommand = new GetObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: s3Key,
     });
 
-    const qrCode = await QRCode.toDataURL(downloadURL);
+    const signedUrl = await getSignedUrl(s3, signedCommand, {
+      expiresIn: parseInt(process.env.URL_EXPIRY),
+    });
 
-    res.json({ code, qrCode, downloadURL });
+    // Use S3 signed URL for QR code
+    const qrCode = await QRCode.toDataURL(signedUrl);
+
+    res.json({ code, qrCode, downloadURL: signedUrl });
   } catch (err) {
     console.error("❌ Upload error:", err);
-    res.status(500).json({
-      error: "Upload failed",
-      details: err.message,
-      stack: err.stack,
-    });
+    res.status(500).json({ error: "Upload failed", details: err.message });
   }
 };
+
 
 
 const getDownloadLink = async (req, res) => {
