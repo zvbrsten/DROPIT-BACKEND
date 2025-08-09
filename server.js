@@ -1,12 +1,16 @@
 const app = require("./app");
-const cron = require("node-cron");
 const fileController = require("./controllers/fileController");
 
-const PORT = process.env.PORT || 8000;
+// Export the Express app so Vercel can handle it
+module.exports = app;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+// Optional: expose a manual cleanup endpoint instead of using node-cron
+// This way, you can hit this route with an external scheduler like GitHub Actions or cron-job.org
+app.get("/api/cleanup", async (req, res) => {
+  try {
+    await fileController.deleteExpiredFiles();
+    res.status(200).json({ message: "Expired files deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete expired files" });
+  }
 });
-
-// Auto-cleanup every 15 minutes
-cron.schedule("*/15 * * * *", fileController.deleteExpiredFiles);
