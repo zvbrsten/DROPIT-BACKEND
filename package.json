@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node server.js",
+    "fix-db": "node scripts/fix-database-indexes.js",
+    "clear-duplicates": "node scripts/clear-duplicates.js",
+    "test-connections": "node scripts/test-connection.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,6 +21,7 @@
     "express": "^5.1.0",
     "mongoose": "^8.16.1",
     "multer": "^2.0.1",
+    "nanoid": "^5.1.5",
     "node-cron": "^4.1.1",
     "qrcode": "^1.5.4"
   }
